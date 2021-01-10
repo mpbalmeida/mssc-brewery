@@ -7,7 +7,11 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import javax.validation.ConstraintViolationException;
+import javax.validation.Valid;
+import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 /**
  * Created by jt on 2019-04-20.
@@ -29,7 +33,7 @@ public class BeerControllerV2 {
     }
 
     @PostMapping
-    public ResponseEntity createBeer(@RequestBody BeerDtoV2 beerDto) {
+    public ResponseEntity createBeer(@Valid @RequestBody BeerDtoV2 beerDto) {
         var savedBeer = beerService.createBeer(beerDto);
 
         var headers = new HttpHeaders();
@@ -40,7 +44,7 @@ public class BeerControllerV2 {
 
     @ResponseStatus(HttpStatus.NO_CONTENT)
     @PutMapping({"/{beerId}"})
-    public void handleUpdate(@PathVariable("beerId") UUID beerId, @RequestBody BeerDtoV2 beerDto) {
+    public void handleUpdate(@PathVariable("beerId") UUID beerId, @Valid @RequestBody BeerDtoV2 beerDto) {
         beerService.updateBeer(beerId, beerDto);
     }
 
@@ -48,5 +52,14 @@ public class BeerControllerV2 {
     @DeleteMapping({"/{beerId}"})
     public void deleteBeer(@PathVariable("beerId") UUID beerId) {
         beerService.deleteBeer(beerId);
+    }
+
+    @ExceptionHandler(ConstraintViolationException.class)
+    public ResponseEntity<List> validationErrorHandler(ConstraintViolationException ex) {
+        var errors = ex.getConstraintViolations().stream()
+                .map(constraintViolation -> constraintViolation.getPropertyPath() + " : " + constraintViolation.getMessage())
+                .collect(Collectors.toList());
+
+        return new ResponseEntity<>(errors, HttpStatus.BAD_REQUEST);
     }
 }
